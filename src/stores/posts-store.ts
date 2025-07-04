@@ -38,6 +38,7 @@ interface PostsState {
   posts: Post[]
   isLoading: boolean
   hasMore: boolean
+  nextCursor: string | null
   
   // Individual post
   currentPost: Post | null
@@ -67,6 +68,11 @@ interface PostsState {
   setLoading: (loading: boolean) => void
   setPostLoading: (loading: boolean) => void
   
+  // Actions - Data Loading
+  loadPosts: (type?: 'home' | 'following' | 'trending', refresh?: boolean) => Promise<void>
+  loadMorePosts: () => Promise<void>
+  refreshPosts: () => Promise<void>
+  
   // Actions - Interactions
   likePost: (postId: string) => void
   unlikePost: (postId: string) => void
@@ -91,68 +97,11 @@ interface PostsState {
   
   // Actions - Bookmarks
   setBookmarkedPosts: (posts: Post[]) => void
+  loadBookmarkedPosts: () => Promise<void>
 }
 
-// Mock data
-const mockUsers: User[] = [
-  {
-    id: "2",
-    name: "Sarah Wilson",
-    username: "sarahw",
-    email: "sarah@example.com",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah&backgroundColor=c0aede",
-    bio: "Designer & coffee lover ☕",
-    followersCount: 2341,
-    followingCount: 432,
-    postsCount: 156,
-    verified: false,
-    joinDate: "2021-03-10"
-  },
-  {
-    id: "3",
-    name: "Mike Chen",
-    username: "mikechen",
-    email: "mike@example.com",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mike&backgroundColor=d1d4f9",
-    bio: "Tech enthusiast & photographer 📸",
-    followersCount: 890,
-    followingCount: 234,
-    postsCount: 67,
-    verified: true,
-    joinDate: "2020-11-22"
-  }
-]
-
-const mockPosts: Post[] = [
-  {
-    id: "1",
-    author: mockUsers[0],
-    content: "Just finished designing a new interface for our app! Really excited about the user experience improvements we're making. The new navigation feels so much more intuitive. 🎨✨",
-    images: ["https://picsum.photos/600/400?random=1"],
-    createdAt: "2024-01-20T10:30:00Z",
-    likesCount: 42,
-    commentsCount: 8,
-    sharesCount: 3,
-    isLiked: false,
-    isBookmarked: false,
-    isShared: false
-  },
-  {
-    id: "2",
-    author: mockUsers[1],
-    content: "Beautiful sunset from my rooftop garden today. Sometimes you need to step away from the screen and appreciate the simple things in life. 🌅",
-    images: ["https://picsum.photos/600/400?random=2"],
-    createdAt: "2024-01-20T08:15:00Z",
-    likesCount: 127,
-    commentsCount: 15,
-    sharesCount: 7,
-    isLiked: true,
-    isBookmarked: true,
-    isShared: false
-  }
-]
-
-const mockTrendingTopics: TrendingTopic[] = [
+// Default trending topics
+const defaultTrendingTopics: TrendingTopic[] = [
   { id: "1", name: "#WebDevelopment", postsCount: 12500, trend: "up" },
   { id: "2", name: "#AI", postsCount: 8900, trend: "up" },
   { id: "3", name: "#Design", postsCount: 5600, trend: "stable" },
@@ -162,9 +111,10 @@ const mockTrendingTopics: TrendingTopic[] = [
 
 export const usePostsStore = create<PostsState>((set, get) => ({
   // Initial state
-  posts: mockPosts,
+  posts: [],
   isLoading: false,
   hasMore: true,
+  nextCursor: null,
   
   currentPost: null,
   isPostLoading: false,
@@ -172,8 +122,8 @@ export const usePostsStore = create<PostsState>((set, get) => ({
   comments: [],
   isCommentsLoading: false,
   
-  trendingTopics: mockTrendingTopics,
-  suggestedUsers: mockUsers,
+  trendingTopics: defaultTrendingTopics,
+  suggestedUsers: [],
   
   bookmarkedPosts: [],
   
@@ -217,6 +167,58 @@ export const usePostsStore = create<PostsState>((set, get) => ({
   setPostLoading: (loading: boolean) => {
     set({ isPostLoading: loading })
   },
+
+  // Data loading actions
+  loadPosts: async (type = 'home', refresh = false) => {
+    const { posts, nextCursor } = get()
+    
+    if (!refresh && posts.length > 0) return
+    
+    set({ isLoading: true })
+    
+    try {
+      const params = new URLSearchParams({
+        type,
+        limit: '10',
+        ...(refresh ? {} : { cursor: nextCursor || '' })
+      })
+      
+      const response = await fetch(`/api/posts?${params}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        const newPosts = data.data.posts.map((post: any) => ({
+          ...post,
+          isShared: false, // Default value since not in API
+        }))
+        
+        set({
+          posts: refresh ? newPosts : [...posts, ...newPosts],
+          nextCursor: data.data.nextCursor,
+          hasMore: !!data.data.nextCursor,
+          isLoading: false
+        })
+      } else {
+        console.error('Failed to load posts:', data.error)
+        set({ isLoading: false })
+      }
+    } catch (error) {
+      console.error('Error loading posts:', error)
+      set({ isLoading: false })
+    }
+  },
+
+  loadMorePosts: async () => {
+    const { hasMore, isLoading } = get()
+    if (!hasMore || isLoading) return
+    
+    await get().loadPosts('home', false)
+  },
+
+  refreshPosts: async () => {
+    set({ nextCursor: null, hasMore: true })
+    await get().loadPosts('home', true)
+  },
   
   // Interaction actions
   likePost: (postId: string) => {
@@ -227,6 +229,17 @@ export const usePostsStore = create<PostsState>((set, get) => ({
         isLiked: true,
         likesCount: post.likesCount + 1
       })
+      
+      // TODO: Call API to like post
+      fetch(`/api/posts/${postId}/like`, { method: 'POST' })
+        .catch(error => {
+          console.error('Failed to like post:', error)
+          // Revert on error
+          updatePost(postId, {
+            isLiked: false,
+            likesCount: Math.max(0, post.likesCount)
+          })
+        })
     }
   },
   
@@ -238,6 +251,17 @@ export const usePostsStore = create<PostsState>((set, get) => ({
         isLiked: false,
         likesCount: Math.max(0, post.likesCount - 1)
       })
+      
+      // TODO: Call API to unlike post
+      fetch(`/api/posts/${postId}/like`, { method: 'DELETE' })
+        .catch(error => {
+          console.error('Failed to unlike post:', error)
+          // Revert on error
+          updatePost(postId, {
+            isLiked: true,
+            likesCount: post.likesCount + 1
+          })
+        })
     }
   },
   
@@ -249,6 +273,17 @@ export const usePostsStore = create<PostsState>((set, get) => ({
       set({
         bookmarkedPosts: [post, ...bookmarkedPosts]
       })
+      
+      // TODO: Call API to bookmark post
+      fetch(`/api/posts/${postId}/bookmark`, { method: 'POST' })
+        .catch(error => {
+          console.error('Failed to bookmark post:', error)
+          // Revert on error
+          updatePost(postId, { isBookmarked: false })
+          set({
+            bookmarkedPosts: bookmarkedPosts.filter(p => p.id !== postId)
+          })
+        })
     }
   },
   
@@ -258,6 +293,14 @@ export const usePostsStore = create<PostsState>((set, get) => ({
     set({
       bookmarkedPosts: bookmarkedPosts.filter(post => post.id !== postId)
     })
+    
+    // TODO: Call API to unbookmark post
+    fetch(`/api/posts/${postId}/bookmark`, { method: 'DELETE' })
+      .catch(error => {
+        console.error('Failed to unbookmark post:', error)
+        // Revert on error
+        updatePost(postId, { isBookmarked: true })
+      })
   },
   
   sharePost: (postId: string) => {
@@ -268,6 +311,12 @@ export const usePostsStore = create<PostsState>((set, get) => ({
         isShared: true,
         sharesCount: post.sharesCount + 1
       })
+      
+      // TODO: Call API to share post
+      fetch(`/api/posts/${postId}/share`, { method: 'POST' })
+        .catch(error => {
+          console.error('Failed to share post:', error)
+        })
     }
   },
   
@@ -348,5 +397,28 @@ export const usePostsStore = create<PostsState>((set, get) => ({
   // Bookmarks actions
   setBookmarkedPosts: (posts: Post[]) => {
     set({ bookmarkedPosts: posts })
+  },
+
+  loadBookmarkedPosts: async () => {
+    set({ isLoading: true })
+    
+    try {
+      // TODO: Create bookmarks API endpoint
+      const response = await fetch('/api/bookmarks')
+      const data = await response.json()
+      
+      if (data.success) {
+        set({
+          bookmarkedPosts: data.data.posts,
+          isLoading: false
+        })
+      } else {
+        console.error('Failed to load bookmarked posts:', data.error)
+        set({ isLoading: false })
+      }
+    } catch (error) {
+      console.error('Error loading bookmarked posts:', error)
+      set({ isLoading: false })
+    }
   }
 })) 

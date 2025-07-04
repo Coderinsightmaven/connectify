@@ -1,8 +1,9 @@
 import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
 import moment from "./moment-config"
 
 export function cn(...inputs: ClassValue[]) {
-  return clsx(inputs)
+  return twMerge(clsx(inputs))
 }
 
 // Legacy function - use TimeAgo component or useTime hook instead

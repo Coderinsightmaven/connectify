@@ -8,10 +8,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Icons } from "@/components/ui/icons"
 import { useUserStore } from "@/stores"
+import { toast } from "sonner"
 
 export function AccountSettings() {
-  const { currentUser, updateProfile } = useUserStore()
+  const { currentUser, updateProfile, setCurrentUser } = useUserStore()
   const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [formData, setFormData] = useState({
     name: currentUser?.name || "",
     username: currentUser?.username || "",
@@ -21,10 +23,34 @@ export function AccountSettings() {
     website: currentUser?.website || ""
   })
 
-  const handleSave = () => {
-    setIsEditing(false)
-    updateProfile(formData)
-    console.log("Saving account settings:", formData)
+  const handleSave = async () => {
+    setIsSaving(true)
+    
+    try {
+      const response = await fetch('/api/users/me', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        // Update the user store with the new data
+        setCurrentUser(data.data.user)
+        setIsEditing(false)
+        toast.success("Profile updated successfully!")
+      } else {
+        toast.error(data.error || "Failed to update profile")
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error)
+      toast.error("Failed to update profile. Please try again.")
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleCancel = () => {
@@ -129,11 +155,18 @@ export function AccountSettings() {
           <div className="flex justify-end space-x-2">
             {isEditing ? (
               <>
-                <Button variant="outline" onClick={handleCancel}>
+                <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
                   Cancel
                 </Button>
-                <Button onClick={handleSave}>
-                  Save Changes
+                <Button onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? (
+                    <>
+                      <Icons.user className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
                 </Button>
               </>
             ) : (
@@ -217,7 +250,19 @@ export function AccountSettings() {
             </Button>
           </div>
 
-          <div className="flex items-center justify-between p-4 border rounded-lg border-destructive/50">
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div>
+              <h4 className="font-medium">Download Data</h4>
+              <p className="text-sm text-muted-foreground">
+                Get a copy of your account data
+              </p>
+            </div>
+            <Button variant="outline">
+              Download
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between p-4 border rounded-lg border-destructive/20">
             <div>
               <h4 className="font-medium text-destructive">Delete Account</h4>
               <p className="text-sm text-muted-foreground">

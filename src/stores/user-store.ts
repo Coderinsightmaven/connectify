@@ -4,9 +4,9 @@ import { persist } from 'zustand/middleware'
 export interface User {
   id: string
   name: string
-  username: string
+  username?: string
   email: string
-  avatar: string
+  avatar?: string
   bio?: string
   location?: string
   website?: string
@@ -15,6 +15,10 @@ export interface User {
   postsCount: number
   verified: boolean
   joinDate: string
+  emailVerified: boolean
+  createdAt: Date
+  updatedAt: Date
+  isFollowing?: boolean // For suggested users
 }
 
 interface UserState {
@@ -32,7 +36,7 @@ interface UserState {
   followers: User[]
   
   // Actions
-  login: (user: User) => void
+  setCurrentUser: (user: User | null) => void
   logout: () => void
   updateProfile: (updates: Partial<User>) => void
   setProfile: (user: User | null) => void
@@ -42,31 +46,16 @@ interface UserState {
   setFollowers: (users: User[]) => void
   setLoading: (loading: boolean) => void
   setProfileLoading: (loading: boolean) => void
-}
-
-// Mock current user data
-const mockCurrentUser: User = {
-  id: "1",
-  name: "John Doe",
-  username: "johndoe",
-  email: "john@example.com",
-  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=john&backgroundColor=b6e3f4",
-  bio: "Software developer passionate about creating amazing user experiences. Love coffee and coding!",
-  location: "San Francisco, CA",
-  website: "https://johndoe.dev",
-  followersCount: 1234,
-  followingCount: 567,
-  postsCount: 89,
-  verified: true,
-  joinDate: "2020-01-15"
+  // Utility function to convert auth session user to our User type
+  convertAuthUser: (authUser: any) => User
 }
 
 export const useUserStore = create<UserState>()(
   persist(
     (set, get) => ({
       // Initial state
-      currentUser: mockCurrentUser, // In real app, this would be null initially
-      isAuthenticated: true, // In real app, this would be false initially
+      currentUser: null,
+      isAuthenticated: false,
       isLoading: false,
       
       profile: null,
@@ -76,10 +65,10 @@ export const useUserStore = create<UserState>()(
       followers: [],
       
       // Actions
-      login: (user: User) => {
+      setCurrentUser: (user: User | null) => {
         set({
           currentUser: user,
-          isAuthenticated: true,
+          isAuthenticated: !!user,
           isLoading: false
         })
       },
@@ -158,6 +147,28 @@ export const useUserStore = create<UserState>()(
       
       setProfileLoading: (loading: boolean) => {
         set({ isProfileLoading: loading })
+      },
+
+      // Utility function to convert auth session user to our User type
+      convertAuthUser: (authUser: any): User => {
+        return {
+          id: authUser.id,
+          name: authUser.name || 'Unknown User',
+          username: authUser.username || authUser.email?.split('@')[0],
+          email: authUser.email,
+          avatar: authUser.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${authUser.id}&backgroundColor=b6e3f4`,
+          bio: authUser.bio || '',
+          location: authUser.location || '',
+          website: authUser.website || '',
+          followersCount: authUser.followersCount || 0,
+          followingCount: authUser.followingCount || 0,
+          postsCount: authUser.postsCount || 0,
+          verified: authUser.verified || false,
+          joinDate: authUser.createdAt ? new Date(authUser.createdAt).toLocaleDateString() : new Date().toLocaleDateString(),
+          emailVerified: authUser.emailVerified || false,
+          createdAt: authUser.createdAt ? new Date(authUser.createdAt) : new Date(),
+          updatedAt: authUser.updatedAt ? new Date(authUser.updatedAt) : new Date()
+        }
       }
     }),
     {
