@@ -5,7 +5,7 @@ A modern social media platform built with Next.js that combines traditional soci
 ## ✨ Features
 
 ### 🔐 User Management
-- **User Authentication** - Secure login/logout system
+- **User Authentication** - Secure login/logout system with Better-Auth
 - **Profile Management** - Customizable user profiles with avatars, bio, and social links
 - **Follow System** - Follow/unfollow users and build your network
 - **User Statistics** - Track followers, following, and engagement metrics
@@ -13,154 +13,240 @@ A modern social media platform built with Next.js that combines traditional soci
 ### 📱 Social Features
 - **Posts & Content** - Create, like, and share posts with image support
 - **Comments** - Interactive comment system on posts
-- **Bookmarks** - Save posts for later viewing
-- **Trending Topics** - Discover what's popular on the platform
+- **Bookmarks** - Save posts for later reading
+- **Trending Topics** - Discover what's popular with hashtag tracking
 - **User Suggestions** - Find new people to follow
+- **Search** - Search for posts, users, and hashtags
 
 ### 🎥 Video Chat
-- **Anonymous Video Chat** - Connect with random strangers worldwide
-- **Smart Matching** - Advanced matching algorithm based on preferences
-- **Country Preferences** - Filter matches by geographic location
-- **Interest-Based Matching** - Connect with people who share your interests
-- **Auto-Skip** - Automatic partner switching for continuous conversations
-- **Report System** - Keep the community safe with built-in reporting
+- **Anonymous Matching** - Connect with random strangers safely
+- **Preferences** - Set country, interest, and age preferences
+- **Auto-Skip** - Automatically skip to next person
+- **Reporting System** - Report inappropriate behavior
+- **Real-time Chat** - Text messaging during video calls
 
 ### ⚙️ Settings & Customization
-- **Theme Management** - Light/dark mode with system preference detection
-- **Notification Controls** - Granular notification preferences
-- **Privacy Settings** - Control who can see your content and contact you
-- **Accessibility** - Font size, animation controls, and high contrast options
-- **Account Management** - Update profile, change password, manage account
+- **Theme Support** - Light, dark, and system themes
+- **Accessibility** - Font size, reduced motion, high contrast options
+- **Notifications** - Granular control over email and push notifications
+- **Privacy Controls** - Manage profile visibility and interaction permissions
 
 ## 🛠️ Tech Stack
 
-- **Framework**: [Next.js 15](https://nextjs.org/) with App Router
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **State Management**: [Zustand](https://zustand-demo.pmnd.rs/)
-- **Icons**: [Lucide React](https://lucide.dev/)
-- **Package Manager**: [Yarn](https://yarnpkg.com/)
+### Frontend
+- **Next.js 15** - React framework with App Router
+- **TypeScript** - Type-safe development
+- **Tailwind CSS** - Utility-first styling
+- **Zustand** - Lightweight state management
+- **Lucide React** - Beautiful icons
+
+### Backend
+- **PostgreSQL** - Robust relational database
+- **Prisma** - Type-safe ORM with migrations
+- **Better-Auth** - Modern authentication system
+- **Zod** - Schema validation and type safety
+- **bcryptjs** - Password hashing
+
+### Infrastructure
+- **Vercel** - Deployment and hosting
+- **Database** - PostgreSQL (local or cloud)
 
 ## 🚀 Getting Started
 
 ### Prerequisites
+- Node.js 18+ and yarn
+- PostgreSQL database (local or cloud)
 
-- Node.js 18+ 
-- Yarn package manager
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd connectify
-   ```
-
-2. **Install dependencies**
-   ```bash
-   yarn install
-   ```
-
-3. **Start the development server**
-   ```bash
-   yarn dev
-   ```
-
-4. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
-
-### Available Scripts
-
+### 1. Clone the Repository
 ```bash
-# Start development server
-yarn dev
-
-# Build for production
-yarn build
-
-# Start production server
-yarn start
-
-# Run linting
-yarn lint
+git clone <your-repo-url>
+cd connectify
+yarn install
 ```
+
+### 2. Environment Setup
+Copy the example environment file and configure it:
+```bash
+cp .env.example .env.local
+```
+
+Update `.env.local` with your configuration:
+```env
+# Database
+DATABASE_URL="postgresql://username:password@localhost:5432/connectify"
+
+# Better Auth
+BETTER_AUTH_SECRET="your-super-secret-key-change-this-in-production"
+BETTER_AUTH_URL="http://localhost:3000"
+
+# Social Auth (optional)
+GITHUB_CLIENT_ID="your-github-client-id"
+GITHUB_CLIENT_SECRET="your-github-client-secret"
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+```
+
+### 3. Database Setup
+
+#### Option A: Local PostgreSQL
+1. Install PostgreSQL on your system
+2. Create a database: `createdb connectify`
+3. Update the `DATABASE_URL` in `.env.local`
+
+#### Option B: Cloud Database (Recommended)
+Use a cloud PostgreSQL service like:
+- **Supabase** (free tier available)
+- **Neon** (serverless PostgreSQL)
+- **Railway** (simple deployment)
+- **PlanetScale** (MySQL alternative)
+
+### 4. Run Database Migrations
+```bash
+# Generate Prisma client
+npx prisma generate
+
+# Run migrations to create tables
+npx prisma migrate dev --name init
+
+# Seed the database with sample data
+npx prisma db seed
+```
+
+### 5. Start Development Server
+```bash
+yarn dev
+```
+
+Visit `http://localhost:3000` to see your app!
 
 ## 📁 Project Structure
 
 ```
 connectify/
+├── prisma/
+│   ├── schema.prisma          # Database schema
+│   ├── migrations/            # Database migrations
+│   └── seed.ts               # Sample data seeding
 ├── src/
-│   ├── app/                    # Next.js App Router pages
-│   │   ├── page.tsx           # Home page with posts feed
-│   │   ├── layout.tsx         # Root layout component
-│   │   └── video-chat/        # Video chat feature pages
-│   ├── components/            # Reusable UI components
-│   │   ├── layout/           # Layout components (header, sidebar)
-│   │   ├── post/             # Post-related components
-│   │   └── settings/         # Settings page components
-│   └── stores/               # Zustand state management
-│       ├── user-store.ts     # User authentication & profiles
-│       ├── posts-store.ts    # Posts, comments, social features
-│       ├── video-chat-store.ts # Video chat & matching
-│       ├── settings-store.ts # App settings & preferences
-│       └── index.ts          # Store exports
-├── public/                   # Static assets
-└── docs/                    # Documentation files
+│   ├── app/
+│   │   ├── api/              # API routes
+│   │   │   ├── auth/         # Authentication endpoints
+│   │   │   ├── users/        # User management
+│   │   │   ├── posts/        # Posts and social features
+│   │   │   ├── search/       # Search functionality
+│   │   │   ├── trending/     # Trending content
+│   │   │   └── video-chat/   # Video chat sessions
+│   │   ├── video-chat/       # Video chat page
+│   │   └── page.tsx          # Home feed
+│   ├── components/           # Reusable UI components
+│   ├── stores/               # Zustand state management
+│   ├── lib/
+│   │   ├── auth.ts           # Better-Auth server config
+│   │   ├── auth-client.ts    # Better-Auth client config
+│   │   ├── db.ts             # Prisma client
+│   │   ├── validations/      # Zod schemas
+│   │   └── utils/            # Utility functions
+│   └── generated/
+│       └── prisma/           # Generated Prisma client
+└── ...
 ```
 
-## 🏪 State Management
+## 🔧 API Endpoints
 
-The application uses [Zustand](https://zustand-demo.pmnd.rs/) for state management with the following stores:
+### Authentication
+- `POST /api/auth/sign-in` - User login
+- `POST /api/auth/sign-up` - User registration
+- `POST /api/auth/sign-out` - User logout
 
-### User Store (`useUserStore`)
-- Current user authentication state
-- Profile management
-- Following/followers relationships
-- User statistics and verification status
+### Users
+- `GET /api/users` - Get users list (with search)
+- `PUT /api/users` - Update user profile
+- `GET /api/users/[id]` - Get user profile
+- `POST /api/users/[id]/follow` - Follow/unfollow user
 
-### Posts Store (`usePostsStore`)
-- Posts feed and CRUD operations
-- Comments system
-- Likes, bookmarks, and shares
-- Trending topics and user suggestions
-- Search functionality
+### Posts
+- `GET /api/posts` - Get posts feed
+- `POST /api/posts` - Create new post
+- `POST /api/posts/[id]/like` - Like/unlike post
+- `POST /api/posts/[id]/bookmark` - Bookmark/unbookmark post
 
-### Video Chat Store (`useVideoChatStore`)
-- Anonymous video chat matching
-- Chat messaging system
-- User preferences and filters
-- Report and moderation features
+### Search & Discovery
+- `GET /api/search` - Search posts, users, hashtags
+- `GET /api/trending` - Get trending content and suggested users
 
-### Settings Store (`useSettingsStore`)
-- Theme and appearance settings
-- Notification preferences
-- Privacy controls
-- Accessibility options
-- Settings persistence
+### Video Chat
+- `POST /api/video-chat/sessions` - Create video chat session
+- `GET /api/video-chat/sessions` - Get active sessions
 
-## 🎨 Theming & Customization
+## 🔒 Authentication
 
-The app supports comprehensive theming:
+The app uses **Better-Auth** for authentication, supporting:
+- Email/password authentication
+- Social login (GitHub, Google)
+- Session management
+- Email verification
+- Password reset
 
-- **Light/Dark Mode**: Automatic system preference detection
-- **Custom Themes**: Easily extendable theme system
-- **Accessibility**: High contrast mode, font size controls
-- **Animations**: Configurable animation preferences
+## 📊 Database Schema
 
-## 🔒 Privacy & Safety
+The database includes these main entities:
+- **Users** - User accounts and profiles
+- **Posts** - User-generated content
+- **Comments** - Post comments and replies
+- **Likes** - Post and comment likes
+- **Follows** - User relationships
+- **Bookmarks** - Saved posts
+- **Hashtags** - Trending topics
+- **VideoChatSessions** - Video chat data
+- **UserSettings** - User preferences
 
-- **Anonymous Chat**: Video chats don't require personal information
-- **Report System**: Users can report inappropriate behavior
-- **Privacy Controls**: Granular privacy settings for profiles and content
-- **Content Moderation**: Built-in systems to maintain community standards
+## 🧪 Development
+
+### Database Management
+```bash
+# View database in Prisma Studio
+npx prisma studio
+
+# Reset database
+npx prisma migrate reset
+
+# Deploy migrations to production
+npx prisma migrate deploy
+```
+
+### Code Quality
+```bash
+# Type checking
+yarn type-check
+
+# Linting
+yarn lint
+
+# Formatting
+yarn format
+```
+
+## 🚀 Deployment
+
+### Vercel (Recommended)
+1. Connect your GitHub repository to Vercel
+2. Add environment variables in Vercel dashboard
+3. Deploy automatically on git push
+
+### Environment Variables for Production
+```env
+DATABASE_URL="your-production-database-url"
+BETTER_AUTH_SECRET="secure-random-secret"
+BETTER_AUTH_URL="https://your-domain.com"
+```
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
 ## 📄 License
 
@@ -168,11 +254,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- Built with [Next.js](https://nextjs.org/)
-- Icons by [Lucide](https://lucide.dev/)
-- Styled with [Tailwind CSS](https://tailwindcss.com/)
-- State management by [Zustand](https://zustand-demo.pmnd.rs/)
+- **Next.js** team for the amazing framework
+- **Prisma** for the excellent database toolkit
+- **Better-Auth** for modern authentication
+- **Tailwind CSS** for utility-first styling
+- **Zustand** for simple state management
 
 ---
 
-**Connectify** - Where connections matter. 🌟
+Built with ❤️ using modern web technologies
